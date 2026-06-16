@@ -1,0 +1,510 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER MANAGEMENT ====================
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  phone           String    @unique
+  password        String
+  role            UserRole  @default(LANDLORD)
+  isActive        Boolean   @default(true)
+  isRestricted    Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Landlord specific fields
+  companyName     String?
+  registeredProperties Int  @default(0)
+  paybillNumber   String?
+  tillNumber      String?
+  
+  // Admin specific fields (optional)
+  adminPermissions Json?    // For fine-grained admin permissions
+  
+  // Relations
+  landlordProfile     LandlordProfile?
+  properties          Property[]
+  subscriptionInvoices SubscriptionInvoice[]
+  supportTickets      SupportTicket[]  // ← ADD THIS LINE
+  
+  @@map("users")
+}
+enum UserRole {
+  ADMIN
+  LANDLORD
+}
+
+model LandlordProfile {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  
+  businessRegNo   String?
+  physicalAddress String?
+  propertyCount   Int       @default(0)
+  subscriptionStatus SubscriptionStatus @default(ACTIVE)
+  subscriptionExpiresAt DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("landlord_profiles")
+}
+
+// ==================== PROPERTY MANAGEMENT ====================
+
+model Property {
+  id              String    @id @default(uuid())
+  landlordId      String
+  landlord        User      @relation(fields: [landlordId], references: [id])
+  
+  name            String
+  description     String?
+  location        String
+  address         String?
+  totalFloors     Int       @default(1)
+  totalUnits      Int       @default(0)
+  status          PropertyStatus @default(ACTIVE)
+  imageUrl        String?
+  
+  // Payment collection
+  paybillNumber   String?
+  tillNumber      String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  floors          Floor[]
+  units           Unit[]
+  
+  @@unique([landlordId, name])
+  @@map("properties")
+}
+
+model Floor {
+  id              String    @id @default(uuid())
+  propertyId      String
+  property        Property  @relation(fields: [propertyId], references: [id])
+  floorNumber     Int
+  floorName       String?
+  unitsPerFloor   Int       @default(0)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  units           Unit[]
+  
+  @@unique([propertyId, floorNumber])
+  @@map("floors")
+}
+
+model Unit {
+  id              String    @id @default(uuid())
+  propertyId      String
+  property        Property  @relation(fields: [propertyId], references: [id])
+  floorId         String?
+  floor           Floor?    @relation(fields: [floorId], references: [id])
+  
+  unitNumber      String
+  unitType        UnitType
+  rentAmount      Decimal   @db.Decimal(10,2)
+  depositAmount   Decimal?  @db.Decimal(10,2)
+  sizeSqm         Decimal?  @db.Decimal(8,2)
+  isOccupied      Boolean   @default(false)
+  status          UnitStatus @default(AVAILABLE)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  tenants         Tenant[]
+  
+  @@unique([propertyId, unitNumber])
+  @@map("units")
+}
+
+// ==================== TENANT MANAGEMENT ====================
+
+model Tenant {
+  id              String    @id @default(uuid())
+  unitId          String
+  unit            Unit      @relation(fields: [unitId], references: [id])
+  
+  fullName        String
+  phone           String
+  email           String?
+  nationalId      String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  leaseStartDate  DateTime?
+  leaseEndDate    DateTime?
+  rentDueDay      Int       @default(1)
+  isActive        Boolean   @default(true)
+  movedInAt       DateTime  @default(now())
+  movedOutAt      DateTime?
+  
+  // Credit tracking for advance payments
+  rentCreditBalance Decimal   @default(0) @db.Decimal(10,2)
+  rentPaidUntil     DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  payments        Payment[]
+  paymentPlans    PaymentPlan[]
+  unmatchedPayments UnmatchedPayment[]
+  
+  @@index([unitId])
+  @@map("tenants")
+}
+
+model Payment {
+  id              String    @id @default(uuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  
+  amount          Decimal   @db.Decimal(10,2)
+  paymentDate     DateTime  @default(now())
+  status          PaymentStatus @default(PENDING)
+  
+  // Advance payment tracking
+  allocatedFrom   DateTime?
+  allocatedTo     DateTime?
+  monthsCovered   Int?
+  remainingCredit Decimal   @default(0) @db.Decimal(10,2)
+  
+  // M-Pesa specific
+  mpesaReceipt    String?   @unique
+  mpesaCheckoutId String?
+  transactionId   String?   @unique
+  
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  receipt         Receipt?
+  
+  @@index([tenantId, status])
+  @@index([paymentDate])
+  @@map("payments")
+}
+
+model PaymentPlan {
+  id              String    @id @default(uuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  
+  planType        PlanType
+  totalAmount     Decimal   @db.Decimal(10,2)
+  paidAmount      Decimal   @db.Decimal(10,2) @default(0)
+  startDate       DateTime
+  endDate         DateTime
+  status          PlanStatus @default(ACTIVE)
+  installmentCount Int      @default(1)
+  installmentsCompleted Int @default(0)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("payment_plans")
+}
+
+model Receipt {
+  id              String    @id @default(uuid())
+  paymentId       String    @unique
+  payment         Payment   @relation(fields: [paymentId], references: [id])
+  
+  receiptNumber   String    @unique
+  pdfUrl          String?
+  generatedAt     DateTime  @default(now())
+  tenantName      String
+  propertyName    String
+  unitNumber      String
+  amountPaid      Decimal   @db.Decimal(10,2)
+  monthPaid       String
+  transactionCode String
+  
+  @@map("receipts")
+}
+
+// ==================== BILLING & SUBSCRIPTION ====================
+
+model SubscriptionInvoice {
+  id              String    @id @default(uuid())
+  landlordId      String
+  landlord        User      @relation(fields: [landlordId], references: [id])
+  
+  propertyCount   Int
+  amount          Decimal   @db.Decimal(10,2)
+  billingPeriod   String
+  dueDate         DateTime
+  paidAt          DateTime?
+  status          InvoiceStatus @default(PENDING)
+  mpesaReceipt    String?
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([landlordId, status])
+  @@map("subscription_invoices")
+}
+
+// ==================== BULK OPERATIONS ====================
+
+model BulkTenantUpload {
+  id              String    @id @default(uuid())
+  landlordId      String
+  propertyId      String
+  fileUrl         String
+  status          BulkStatus @default(PENDING)
+  successCount    Int       @default(0)
+  errorCount      Int       @default(0)
+  errors          Json?
+  
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  
+  @@map("bulk_tenant_uploads")
+}
+
+model BulkUnitUpload {
+  id              String    @id @default(uuid())
+  landlordId      String
+  propertyId      String
+  fileUrl         String
+  status          BulkStatus @default(PENDING)
+  successCount    Int       @default(0)
+  errorCount      Int       @default(0)
+  errors          Json?
+  
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  
+  @@map("bulk_unit_uploads")
+}
+// Add this model after the existing models
+
+model SystemSettings {
+  id              String    @id @default(uuid())
+  key             String    @unique
+  value           String
+  description     String?
+  updatedAt       DateTime  @updatedAt
+  updatedBy       String?
+  
+  @@map("system_settings")
+}
+// Add after SystemSettings model
+
+model CompanySettings {
+  id              String    @id @default(uuid())
+  
+  // Contact Information
+  companyName     String    @default("Saliq Software Solutions")
+  email           String    @default("support@saliq.co.ke")
+  phone           String    @default("+254700000000")
+  phoneAlt        String?
+  physicalAddress String?
+  
+  // Social Media
+  facebookUrl     String?
+  twitterUrl      String?
+  instagramUrl    String?
+  linkedinUrl     String?
+  youtubeUrl      String?
+  
+  // Support Hours
+  supportHours    String?   @default("Monday - Friday: 9am - 5pm EAT")
+  
+  // Other Settings
+  logoUrl         String?
+  faviconUrl      String?
+  
+  updatedAt       DateTime  @updatedAt
+  updatedBy       String?
+  
+  @@map("company_settings")
+}
+
+model SupportTicket {
+  id              String    @id @default(uuid())
+  landlordId      String
+  landlord        User      @relation(fields: [landlordId], references: [id], onDelete: Cascade)
+  
+  subject         String
+  message         String
+  category        TicketCategory
+  priority        TicketPriority @default(MEDIUM)
+  status          TicketStatus @default(OPEN)
+  
+  attachments     String?
+  assignedTo      String?
+  adminNote       String?
+  resolvedAt      DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  replies         SupportReply[]
+  
+  @@index([landlordId, status])
+  @@map("support_tickets")
+}
+
+model SupportReply {
+  id              String    @id @default(uuid())
+  ticketId        String
+  ticket          SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  message         String
+  isFromAdmin     Boolean   @default(false)
+  senderId        String
+  attachments     String?
+  
+  createdAt       DateTime  @default(now())
+  
+  @@map("support_replies")
+}
+
+model KnowledgeBase {
+  id              String    @id @default(uuid())
+  title           String
+  content         String
+  category        String
+  tags            String?
+  isPublished     Boolean   @default(true)
+  viewCount       Int       @default(0)
+  helpfulCount    Int       @default(0)
+  notHelpfulCount Int       @default(0)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String
+  
+  @@map("knowledge_base")
+}
+
+enum TicketCategory {
+  TECHNICAL
+  BILLING
+  FEATURE_REQUEST
+  PROPERTY_MANAGEMENT
+  PAYMENT_ISSUE
+  ACCOUNT_ISSUE
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model UnmatchedPayment {
+  id              String    @id @default(uuid())
+  amount          Decimal   @db.Decimal(10,2)
+  mpesaReceipt    String    @unique
+  phoneNumber     String?
+  accountReference String?
+  transactionId   String?
+  status          UnmatchedStatus @default(PENDING)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  assignedTenantId String?
+  assignedTo      Tenant?   @relation(fields: [assignedTenantId], references: [id], onDelete: SetNull)
+  
+  @@map("unmatched_payments")
+}
+
+enum UnmatchedStatus {
+  PENDING
+  RESOLVED
+  IGNORED
+}
+
+// ==================== ENUMS ====================
+
+// REMOVED DUPLICATE: enum UserRole (already defined above)
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  PENDING_PAYMENT
+}
+
+enum PropertyStatus {
+  ACTIVE
+  INACTIVE
+  UNDER_MAINTENANCE
+}
+
+enum UnitType {
+  BEDSITTER
+  ONE_BEDROOM
+  TWO_BEDROOM
+  THREE_BEDROOM
+  STUDIO
+  SHARED
+  COMMERCIAL
+}
+
+enum UnitStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  RESERVED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIAL
+}
+
+enum PlanType {
+  MONTHLY
+  QUARTERLY
+  BIANNUAL
+  ANNUAL
+  BIENNIAL
+}
+
+enum PlanStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  DEFAULTED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum BulkStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
