@@ -1,10 +1,22 @@
 // app/admin/settings/company/CompanySettingsClient.tsx
-// Company Settings Form
+// Company Settings Form - Fixed icons
 
 'use client'
 
 import { useState } from 'react'
-import { Building2, Mail, Phone, MapPin, Globe, Facebook, Twitter, Instagram, Linkedin, Youtube, Clock, Save, CheckCircle, AlertCircle } from 'lucide-react'
+import { 
+  Building2, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Globe, 
+  Clock, 
+  Save, 
+  CheckCircle, 
+  AlertCircle,
+  Link2,
+  Share2
+} from 'lucide-react'
 
 interface CompanySettings {
   id: string
@@ -53,6 +65,42 @@ export default function CompanySettingsClient({ initialData }: { initialData: Co
     }
   }
 
+  // Get social media icon color
+  const getSocialColor = (platform: string) => {
+    switch (platform) {
+      case 'facebook': return 'text-blue-600 border-blue-200 focus:ring-blue-500'
+      case 'twitter': return 'text-sky-500 border-sky-200 focus:ring-sky-500'
+      case 'instagram': return 'text-pink-600 border-pink-200 focus:ring-pink-500'
+      case 'linkedin': return 'text-blue-700 border-blue-200 focus:ring-blue-700'
+      case 'youtube': return 'text-red-600 border-red-200 focus:ring-red-500'
+      default: return 'text-gold-500 border-gold-200 focus:ring-gold-500'
+    }
+  }
+
+  // Get social media placeholder
+  const getSocialPlaceholder = (platform: string) => {
+    switch (platform) {
+      case 'facebook': return 'https://facebook.com/yourpage'
+      case 'twitter': return 'https://twitter.com/yourhandle'
+      case 'instagram': return 'https://instagram.com/yourhandle'
+      case 'linkedin': return 'https://linkedin.com/company/yourcompany'
+      case 'youtube': return 'https://youtube.com/@yourchannel'
+      default: return 'https://example.com'
+    }
+  }
+
+  // Get social media label
+  const getSocialLabel = (platform: string) => {
+    switch (platform) {
+      case 'facebook': return 'Facebook'
+      case 'twitter': return 'Twitter/X'
+      case 'instagram': return 'Instagram'
+      case 'linkedin': return 'LinkedIn'
+      case 'youtube': return 'YouTube'
+      default: return platform
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-cream-200 via-cream-100 to-cream-200">
       {toast && (
@@ -84,27 +132,63 @@ export default function CompanySettingsClient({ initialData }: { initialData: Co
               <div className="space-y-4">
                 <div>
                   <label className="label">Company Name</label>
-                  <input type="text" className="input-field" value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} />
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    value={formData.companyName} 
+                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} 
+                    placeholder="Saliq Software Solutions"
+                  />
                 </div>
                 <div>
                   <label className="label">Support Email</label>
-                  <input type="email" className="input-field" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                  <input 
+                    type="email" 
+                    className="input-field" 
+                    value={formData.email} 
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+                    placeholder="support@saliq.co.ke"
+                  />
                 </div>
                 <div>
                   <label className="label">Primary Phone</label>
-                  <input type="tel" className="input-field" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                  <input 
+                    type="tel" 
+                    className="input-field" 
+                    value={formData.phone} 
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+                    placeholder="+254700000000"
+                  />
                 </div>
                 <div>
                   <label className="label">Secondary Phone (Optional)</label>
-                  <input type="tel" className="input-field" value={formData.phoneAlt || ''} onChange={(e) => setFormData({ ...formData, phoneAlt: e.target.value || null })} />
+                  <input 
+                    type="tel" 
+                    className="input-field" 
+                    value={formData.phoneAlt || ''} 
+                    onChange={(e) => setFormData({ ...formData, phoneAlt: e.target.value || null })} 
+                    placeholder="+254700000001"
+                  />
                 </div>
                 <div>
                   <label className="label">Physical Address</label>
-                  <textarea rows={2} className="input-field" value={formData.physicalAddress || ''} onChange={(e) => setFormData({ ...formData, physicalAddress: e.target.value || null })} />
+                  <textarea 
+                    rows={2} 
+                    className="input-field" 
+                    value={formData.physicalAddress || ''} 
+                    onChange={(e) => setFormData({ ...formData, physicalAddress: e.target.value || null })} 
+                    placeholder="Nairobi, Kenya"
+                  />
                 </div>
                 <div>
                   <label className="label">Support Hours</label>
-                  <input type="text" className="input-field" value={formData.supportHours || ''} onChange={(e) => setFormData({ ...formData, supportHours: e.target.value || null })} placeholder="e.g., Monday - Friday: 9am - 5pm EAT" />
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    value={formData.supportHours || ''} 
+                    onChange={(e) => setFormData({ ...formData, supportHours: e.target.value || null })} 
+                    placeholder="Monday - Friday: 9am - 5pm EAT"
+                  />
                 </div>
               </div>
             </div>
@@ -112,29 +196,24 @@ export default function CompanySettingsClient({ initialData }: { initialData: Co
             {/* Social Media Links */}
             <div>
               <h2 className="font-serif text-xl text-navy-700 mb-4 flex items-center gap-2">
-                <Globe size={18} className="text-gold-500" /> Social Media Links
+                <Share2 size={18} className="text-gold-500" /> Social Media Links
               </h2>
+              <p className="text-sm text-navy-500 mb-4">Add your social media profiles to help tenants connect with you.</p>
               <div className="space-y-4">
-                <div>
-                  <label className="label flex items-center gap-2"><Facebook size={16} /> Facebook</label>
-                  <input type="url" className="input-field" value={formData.facebookUrl || ''} onChange={(e) => setFormData({ ...formData, facebookUrl: e.target.value || null })} placeholder="https://facebook.com/yourpage" />
-                </div>
-                <div>
-                  <label className="label flex items-center gap-2"><Twitter size={16} /> Twitter/X</label>
-                  <input type="url" className="input-field" value={formData.twitterUrl || ''} onChange={(e) => setFormData({ ...formData, twitterUrl: e.target.value || null })} />
-                </div>
-                <div>
-                  <label className="label flex items-center gap-2"><Instagram size={16} /> Instagram</label>
-                  <input type="url" className="input-field" value={formData.instagramUrl || ''} onChange={(e) => setFormData({ ...formData, instagramUrl: e.target.value || null })} />
-                </div>
-                <div>
-                  <label className="label flex items-center gap-2"><Linkedin size={16} /> LinkedIn</label>
-                  <input type="url" className="input-field" value={formData.linkedinUrl || ''} onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value || null })} />
-                </div>
-                <div>
-                  <label className="label flex items-center gap-2"><Youtube size={16} /> YouTube</label>
-                  <input type="url" className="input-field" value={formData.youtubeUrl || ''} onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value || null })} />
-                </div>
+                {['facebook', 'twitter', 'instagram', 'linkedin', 'youtube'].map((platform) => (
+                  <div key={platform}>
+                    <label className={`label flex items-center gap-2 ${getSocialColor(platform)}`}>
+                      <Link2 size={16} /> {getSocialLabel(platform)}
+                    </label>
+                    <input 
+                      type="url" 
+                      className="input-field" 
+                      value={formData[`${platform}Url` as keyof CompanySettings] || ''} 
+                      onChange={(e) => setFormData({ ...formData, [`${platform}Url`]: e.target.value || null })} 
+                      placeholder={getSocialPlaceholder(platform)}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
 

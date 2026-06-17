@@ -7,7 +7,7 @@ import { generateReceiptPDF } from '@/lib/pdf-generator'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { receiptNumber: string } }
+  { params }: { params: Promise<{ receiptNumber: string }> }
 ) {
   try {
     const { receiptNumber } = await params
@@ -61,6 +61,6 @@ export async function POST(
     })
   } catch (error) {
     console.error('PDF generation error:', error)
-    return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to generate PDF: ' + (error as Error).message }, { status: 500 })
   }
 }

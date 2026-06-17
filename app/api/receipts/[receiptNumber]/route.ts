@@ -1,18 +1,34 @@
 // app/api/receipts/[receiptNumber]/route.ts
-// Public API for downloading receipts (no auth required)
+// Public API for fetching receipt data
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getReceiptByNumber } from '@/lib/receipt'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { receiptNumber: string } }
+  { params }: { params: Promise<{ receiptNumber: string }> }
 ) {
   try {
     const { receiptNumber } = await params
 
-    const receipt = await getReceiptByNumber(receiptNumber)
+    const receipt = await prisma.receipt.findUnique({
+      where: { receiptNumber },
+      include: {
+        payment: {
+          include: {
+            tenant: {
+              include: {
+                unit: {
+                  include: {
+                    property: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
 
     if (!receipt) {
       return NextResponse.json({ error: 'Receipt not found' }, { status: 404 })
@@ -27,7 +43,21 @@ export async function GET(
       }
     })
 
-    return NextResponse.json(receipt)
+    return NextResponse.json({
+      id: receipt.id,
+      receiptNumber: receipt.receiptNumber,
+      tenantName: receipt.tenantName,
+      propertyName: receipt.propertyName,
+      unitNumber: receipt.unitNumber,
+      amountPaid: Number(receipt.amountPaid),
+      monthPaid: receipt.monthPaid,
+      transactionCode: receipt.transactionCode,
+      generatedAt: receipt.generatedAt.toISOString(),
+      payment: {
+        mpesaReceipt: receipt.payment?.mpesaReceipt,
+        paymentDate: receipt.payment?.paymentDate?.toISOString()
+      }
+    })
   } catch (error) {
     console.error('Error fetching receipt:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -76,8 +76,6 @@ export async function GET() {
             phone: tenant.phone,
             email: tenant.email,
             isActive: tenant.isActive,
-            leaseStartDate: tenant.leaseStartDate?.toISOString() || null,
-            leaseEndDate: tenant.leaseEndDate?.toISOString() || null,
             rentPaidUntil: tenant.rentPaidUntil?.toISOString() || null,
             rentCreditBalance: Number(tenant.rentCreditBalance)
           }))

@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma'
 // GET - Fetch a single property by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -70,7 +70,7 @@ export async function GET(
 // PUT - Update a property
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -135,7 +135,7 @@ export async function PUT(
 // DELETE - Delete a property
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -184,7 +184,7 @@ export async function DELETE(
       where: { unit: { propertyId: id } }
     })
     await prisma.unit.deleteMany({
-      where: { propertyId: id }
+      where: { propertyId: id } 
     })
     await prisma.floor.deleteMany({
       where: { propertyId: id }

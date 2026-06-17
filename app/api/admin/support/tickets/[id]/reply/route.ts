@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -56,7 +56,7 @@ export async function POST(
       createdAt: reply.createdAt.toISOString()
     })
   } catch (error) {
-    console.Error('Error adding admin reply:', error)
+    console.error('Error adding admin reply:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

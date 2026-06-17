@@ -7,7 +7,40 @@ import jwt from 'jsonwebtoken'
 import { prisma } from '@/lib/prisma'
 import AdminClient from './AdminClient'
 
-async function getAdminData() {
+// Define the Landlord type to match what AdminClient expects
+interface Landlord {
+  id: string
+  email: string
+  phone: string
+  companyName: string | null  // Allow null
+  registeredProperties: number
+  isActive: boolean
+  isRestricted: boolean
+  createdAt: string
+  landlordProfile: {
+    businessRegNo: string | null
+    physicalAddress: string | null
+    subscriptionStatus: string
+    subscriptionExpiresAt: string | null
+    propertyCount: number
+  }
+  properties: any[]
+  invoices: any[]
+}
+
+interface AdminData {
+  landlords: Landlord[]
+  totalLandlords: number
+  totalProperties: number
+  totalUnits: number
+  totalTenants: number
+  totalCollected: number
+  pendingInvoices: number
+  properties: any[]
+  invoices: any[]
+}
+
+async function getAdminData(): Promise<AdminData> {
   try {
     // Get all landlords with complete data
     const landlords = await prisma.user.findMany({
@@ -52,7 +85,7 @@ async function getAdminData() {
     })
 
     // Serialize all data
-    const serializedLandlords = landlords.map(landlord => {
+    const serializedLandlords: Landlord[] = landlords.map(landlord => {
       const properties = landlord.properties.map(property => {
         const units = property.units.map(unit => ({
           id: unit.id,
@@ -96,17 +129,17 @@ async function getAdminData() {
         id: landlord.id,
         email: landlord.email,
         phone: landlord.phone,
-        companyName: landlord.companyName,
+        companyName: landlord.companyName, // Allow null
         registeredProperties: landlord.registeredProperties,
         isActive: landlord.isActive,
         isRestricted: landlord.isRestricted,
         createdAt: landlord.createdAt.toISOString(),
         landlordProfile: {
-          businessRegNo: landlord.landlordProfile?.businessRegNo,
-          physicalAddress: landlord.landlordProfile?.physicalAddress,
-          subscriptionStatus: landlord.landlordProfile?.subscriptionStatus,
+          businessRegNo: landlord.landlordProfile?.businessRegNo || null,
+          physicalAddress: landlord.landlordProfile?.physicalAddress || null,
+          subscriptionStatus: landlord.landlordProfile?.subscriptionStatus || 'PENDING',
           subscriptionExpiresAt: landlord.landlordProfile?.subscriptionExpiresAt?.toISOString() || null,
-          propertyCount: landlord.landlordProfile?.propertyCount
+          propertyCount: landlord.landlordProfile?.propertyCount || 0
         },
         properties: properties,
         invoices: landlord.subscriptionInvoices.map(inv => ({

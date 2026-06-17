@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const cookieStore = await cookies()
@@ -50,7 +50,7 @@ export async function PUT(
       adminNote: ticket.adminNote
     })
   } catch (error) {
-    console.Error('Error updating ticket:', error)
+    console.error('Error updating ticket:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
