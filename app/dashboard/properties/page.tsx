@@ -43,7 +43,13 @@ async function getPropertiesData(userId: string) {
         rentAmount: Number(unit.rentAmount),
         depositAmount: unit.depositAmount ? Number(unit.depositAmount) : null,
         sizeSqm: unit.sizeSqm ? Number(unit.sizeSqm) : null,
-        isOccupied: Boolean(unit.isOccupied)
+        isOccupied: Boolean(unit.isOccupied),
+        tenants: unit.tenants.map(tenant => ({
+          ...tenant,
+          rentCreditBalance: Number(tenant.rentCreditBalance),
+          // Convert other Decimal fields if any
+          // rentPaidUntil is a Date, keep as is (will be stringified)
+        }))
       }))
     }))
 
