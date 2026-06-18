@@ -30,12 +30,13 @@
   },
   "include": [
     "next-env.d.ts",
+    "globals.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "tailwind.config.js", "next.config.js"  ],
   "exclude": [
     "node_modules"
   ]
